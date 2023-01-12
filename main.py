@@ -6,6 +6,8 @@ import nltk
 import re
 from nltk.corpus import stopwords
 import string
+from bs4 import BeautifulSoup
+import requests
 
 data = pd.read_csv("tinder_google_play_reviews.csv")
 print(data.head())
