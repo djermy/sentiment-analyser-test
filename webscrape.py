@@ -1,31 +1,34 @@
 from bs4 import BeautifulSoup
-import requests
+from selenium import webdriver
+import time
 
-HEADERS = ({'User-Agent':
-            'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:108.0) \
-            AppleWebKit/537.36 (KHTML, like Gecko) \
-            Chrome/90.0.4430.212 Safari/537.36',
-            'Accept-Language': 'en-US, en;q=0.5'})
+driver = webdriver.Firefox()
+url = "https://www.argos.co.uk/product/2010517"
+driver.get(url)
+time.sleep(3)
+driver.find_element_by_id('consent_prompt_submit').click()
+driver.find_element_by_id('reviews-accordion-accordion-control-reviews-accordion').click()
+show_more_button = None
+try:
+    show_more_button = driver.find_element_by_css_selector('[data-test="show-x-more-reviews-button"]')
+except:
+    show_more_button = None
+while show_more_button:
+    show_more_button.click()
+    time.sleep(0.4)
+    try:
+        show_more_button = driver.find_element_by_css_selector('[data-test="show-x-more-reviews-button"]')
+    except:
+        show_more_button = None
+soup = BeautifulSoup(driver.page_source, 'html.parser')
+driver.quit()
 
-def get_data(url):
-    r = requests.get(url, headers=HEADERS)
-    return r.text
+review_container = soup.find("div", {"class": "Reviewsstyles__ReviewsContainer-sc-6g3q7a-10"})
+reviews = review_container.find_all('div', {'data-test': 'review-item'})
+for review in reviews:
+    title = review.find('p', {'class': 'ReviewItemstyle__Title-sc-8dsnp1-0'}).decode_contents()
+    description = review.find('p', {'itemprop': 'reviewBody'}).decode_contents()
+    rating = review.find('span', {'itemprop': 'ratingValue'}).decode_contents()
+    print(f'Title: {title}\nDescription: {description}\nRating: {rating} out of 5\n---')
 
-def html_code(url):
-
-    # pass the url
-    # into getdata function
-    htmldata = get_data(url)
-    soup = BeautifulSoup(htmldata, 'html.parser')
-
-    # display html code
-    return (soup)
-
-url = "https://www.amazon.co.uk/Maynards-Bassetts-Giant-Sweets-Sharing/dp/B08ZTFLZWJ/ref=sr_1_2?crid=1GJQZIFB8DM2E&keywords=wine+gums&qid=1673521299&sprefix=wine+gum%2Caps%2C149&sr=8-2"
-soup = html_code(url)
-print(soup)
-
-if '!DOCTYPE' in soup:
-    print('yes!')
-else:
-    print('no =(')
+print('Total Reviews: ' + str(len(reviews)))
