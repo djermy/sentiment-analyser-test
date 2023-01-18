@@ -1,37 +1,42 @@
-from bs4 import BeautifulSoup
 from selenium import webdriver
 import time
+from bs4 import BeautifulSoup
 import pandas as pd
 
-driver = webdriver.Firefox()
-url = "https://www.argos.co.uk/product/2010517"
-driver.get(url)
-time.sleep(3)
-driver.find_element_by_id('consent_prompt_submit').click()
-driver.find_element_by_id('reviews-accordion-accordion-control-reviews-accordion').click()
-show_more_button = None
+def soup_maker(url):
+    '''
+    Takes url as input and outputs BeautifulSoup element containing reviews. 
+    '''
+    driver = webdriver.Firefox()
+    #url = "https://www.argos.co.uk/product/2010517"
+    driver.get(url)
+    time.sleep(3)
+    driver.find_element_by_id('consent_prompt_submit').click()
+    driver.find_element_by_id('reviews-accordion-accordion-control-reviews-accordion').click()
 
-show_more_button = None
-
-try:
-    show_more_button = driver.find_element_by_css_selector('[data-test="show-x-more-reviews-button"]')
-except:
     show_more_button = None
 
-while show_more_button:
-    show_more_button.click()
-    time.sleep(0.4)  
     try:
         show_more_button = driver.find_element_by_css_selector('[data-test="show-x-more-reviews-button"]')
     except:
         show_more_button = None
-        
-soup = BeautifulSoup(driver.page_source, 'html.parser')
-driver.quit()
 
-review_container = soup.find("div", {"class": "Reviewsstyles__ReviewsContainer-sc-6g3q7a-10"})
-reviews = review_container.find_all('div', {'data-test': 'review-item'})
-print('Total Reviews: ' + str(len(reviews)))
+    while show_more_button:
+        time.sleep(0.4)
+        show_more_button.click()
+        time.sleep(0.4)  
+        try:
+            show_more_button = driver.find_element_by_css_selector('[data-test="show-x-more-reviews-button"]')
+        except:
+            show_more_button = None
+
+    soup = BeautifulSoup(driver.page_source, 'html.parser')
+    driver.quit()
+    
+    review_container = soup.find("div", {"class": "Reviewsstyles__ReviewsContainer-sc-6g3q7a-10"})
+    reviews = review_container.find_all('div', {'data-test': 'review-item'})
+    
+    return reviews
 
 def generate_dataframe(reviews):
     '''
@@ -50,4 +55,3 @@ def generate_dataframe(reviews):
         columns=['title', 'description', 'rating'])
 
     return df
-print(generate_dataframe(reviews))

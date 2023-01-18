@@ -6,21 +6,17 @@ import nltk
 import re
 from nltk.corpus import stopwords
 import string
-from bs4 import BeautifulSoup
-import requests
+from webscrape import soup_maker, generate_dataframe
 
-data = pd.read_csv("tinder_google_play_reviews.csv")
-print(data.head())
 
-data = data[["content"]]
+df = generate_dataframe(soup_maker('https://www.argos.co.uk/product/8275332?clickSR=slp:term:lego%20set:7:247:1'))
+print(df.head())
 
 # check if null values exist
-data.isnull().sum()
+df.isnull().sum()
 
 # remove null values
-data = data.dropna()
-
-nltk.download('stopwords')
+df = df.dropna()
 
 # initialise portstemmer
 stemmer = nltk.SnowballStemmer("english")
@@ -40,60 +36,69 @@ def clean(text):
     text = [stemmer.stem(word) for word in text.split(' ')]
     text=" ".join(text)
     return text
-data["content"] = data["content"].apply(clean)
+df["description"] = df["description"].apply(clean)
 
-
+print(df.head())
+'''
 # displays stemmed, non stopwords in a wordcloud
-text = " ".join(i for i in data.content)
+text = " ".join(i for i in df.description)
 stopwords = set(STOPWORDS)
 wordcloud = WordCloud(stopwords=stopwords, background_color="white").generate(text)
 plt.figure( figsize=(15,10))
 plt.imshow(wordcloud, interpolation='bilinear')
 plt.axis("off")
 plt.show()
-
+'''
 # adds 3 columns to dataframe with the sentiment scores of the reviews
 nltk.download('vader_lexicon')
 sentiments = SentimentIntensityAnalyzer()
-data["Positive"] = [sentiments.polarity_scores(i)["pos"] for i in data["content"]]
-data["Negative"] = [sentiments.polarity_scores(i)["neg"] for i in data["content"]]
-data["Neutral"] = [sentiments.polarity_scores(i)["neu"] for i in data["content"]]
-data = data[["content", "Positive", "Negative", "Neutral"]]
-print(data.head())
-
+df["Positive"] = [sentiments.polarity_scores(i)["pos"] for i in df["description"]]
+df["Negative"] = [sentiments.polarity_scores(i)["neg"] for i in df["description"]]
+df["Neutral"] = [sentiments.polarity_scores(i)["neu"] for i in df["description"]]
+df = df[["title", "description", "rating", "Positive", "Negative", "Neutral"]]
+print(df.head())
+'''
 # displays wordcloud of positive reviews
-positive =' '.join([i for i in data['content'][data['Positive'] > data["Negative"]]])
+positive =' '.join([i for i in df['description'][df['Positive'] > df["Negative"]]])
 stopwords = set(STOPWORDS)
 wordcloud = WordCloud(stopwords=stopwords, background_color="white").generate(positive)
 plt.figure( figsize=(15,10))
 plt.imshow(wordcloud, interpolation='bilinear')
 plt.axis("off")
 plt.show()
-
+'''
+'''
 # displays wordcloud of negative reviews
-negative =' '.join([i for i in data['content'][data['Negative'] > data["Positive"]]])
+negative =' '.join([i for i in df['description'][df['Negative'] > df["Positive"]]])
 stopwords = set(STOPWORDS)
 wordcloud = WordCloud(stopwords=stopwords, background_color="white").generate(negative)
 plt.figure( figsize=(15,10))
 plt.imshow(wordcloud, interpolation='bilinear')
 plt.axis("off")
 plt.show()
-
+'''
 # displays overall sentiment of reviews
-x = sum(data["Positive"])
-y = sum(data["Negative"])
-z = sum(data["Neutral"])
+x = sum(df["Positive"])
+y = sum(df["Negative"])
+z = sum(df["Neutral"])
 
 def sentiment_score(a, b, c):
     if (a>b) and (a>c):
-        print("Positive")
+        print('Overall reviews are: ' + "Positive")
     elif (b>a) and (b>c):
-        print("Negative")
+        print('Overall reviews are: ' + "Negative")
     else:
-        print("Neutral")
+        print('Overall reviews are: ' + "Neutral")
 sentiment_score(x, y, z)
 
+def sentiment_percent(a, b, c):
+    total = sum([a, b, c])
+    print(str(round(a / total * 100)) + '%' + ' of reviews are Positive')
+    print(str(round(b / total * 100)) + '%' + ' of reviews are Negative')
+    print(str(round(c / total * 100)) + '%' + ' of reviews are Neutral')
+sentiment_percent(x, y, z)
+
 # displays total score of each sentiment
-print("Positive: ", x)
-print("Negative: ", y)
-print("Neutral: ", z)
+print("Positive score: ", x)
+print("Negative score: ", y)
+print("Neutral score: ", z)
