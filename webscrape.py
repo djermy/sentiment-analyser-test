@@ -2,33 +2,35 @@ from selenium import webdriver
 import time
 from bs4 import BeautifulSoup
 import pandas as pd
+from selenium.webdriver.firefox.options import Options
+
+def find_show_more(driver):
+    show_more_button = None
+    try:
+        show_more_button = driver.find_element_by_css_selector('[data-test="show-x-more-reviews-button"]')
+    except:
+        show_more_button = None
+    return show_more_button
 
 def soup_maker(url):
     '''
     Takes url as input and outputs BeautifulSoup element containing reviews. 
     '''
-    driver = webdriver.Firefox()
+    options = Options()
+    options.add_argument("--headless")
+    driver = webdriver.Firefox(options=options)
     #url = "https://www.argos.co.uk/product/2010517"
     driver.get(url)
     time.sleep(3)
     driver.find_element_by_id('consent_prompt_submit').click()
     driver.find_element_by_id('reviews-accordion-accordion-control-reviews-accordion').click()
 
-    show_more_button = None
-
-    try:
-        show_more_button = driver.find_element_by_css_selector('[data-test="show-x-more-reviews-button"]')
-    except:
-        show_more_button = None
+    show_more_button = find_show_more(driver)
 
     while show_more_button:
-        time.sleep(0.4)
         show_more_button.click()
         time.sleep(0.4)  
-        try:
-            show_more_button = driver.find_element_by_css_selector('[data-test="show-x-more-reviews-button"]')
-        except:
-            show_more_button = None
+        show_more_button = find_show_more(driver)
 
     soup = BeautifulSoup(driver.page_source, 'html.parser')
     driver.quit()
