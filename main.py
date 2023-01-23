@@ -1,81 +1,27 @@
-import matplotlib.pyplot as plt
-from nltk.sentiment.vader import SentimentIntensityAnalyzer
-import nltk
-import re
-from nltk.corpus import stopwords
-import string
-from webscrape import soup_maker, generate_dataframe
-import os
+import sys
 
-def clear_screen():
-    return os.system('cls' if os.name == 'nt' else 'clear')
+from webscrape import scrape_reviews
+from nlp import analyse_sentiment, calculate_score, sentiment_overall, sentiment_percent
+from render import display_ratings_bar_chart, display_results
 
-url = input('Please enter a valid product link to argos.co.uk: ')
-df = generate_dataframe(soup_maker(url))
-print(df.head())
+def main():
+    # take url from user.
+    url = input('Please enter a valid product link to argos.co.uk: ')
 
-# initialise portstemmer
-stemmer = nltk.SnowballStemmer("english")
-stopword = set(stopwords.words('english'))
+    # extract and analyse reviews
+    reviews_df = scrape_reviews(url)
+    sentiment_df = analyse_sentiment(reviews_df)
 
-# function to clean, tokenize, remove stopwords, stem and rejoin text
-def clean(text):
-    text = str(text).lower()
-    text = re.sub('\[.*?\]', '', text)
-    text = re.sub('https?://\S+|www\.\S+', '', text)
-    text = re.sub('<.*?>+', '', text)
-    text = re.sub('[%s]' % re.escape(string.punctuation), '', text)
-    text = re.sub('\n', '', text)
-    text = re.sub('\w*\d\w*', '', text)
-    text = [word for word in text.split(' ') if word not in stopword]
-    text = " ".join(text)
-    text = [stemmer.stem(word) for word in text.split(' ')]
-    text = " ".join(text)
-    return text
+    # calculate sentiment data results
+    score = calculate_score(sentiment_df)
+    overall = sentiment_overall(score)
+    percentages = (sentiment_percent(score))
+    mean = sentiment_df['rating'].mean()
 
-df["description"] = df["description"].apply(clean)
-
-#print(df.head())
-
-# adds 3 columns to dataframe with the sentiment scores of the reviews
-sentiments = SentimentIntensityAnalyzer()
-df["Positive"] = [sentiments.polarity_scores(i)["pos"] for i in df["description"]]
-df["Negative"] = [sentiments.polarity_scores(i)["neg"] for i in df["description"]]
-df["Neutral"] = [sentiments.polarity_scores(i)["neu"] for i in df["description"]]
-df = df[["title", "description", "rating", "Positive", "Negative", "Neutral"]]
-
-# displays overall sentiment of reviews
-x = sum(df["Positive"])
-y = sum(df["Negative"])
-z = sum(df["Neutral"])
-
-def sentiment_score(a, b, c):
-    '''
-    Takes 3 sums of sentiments as input and displays overall sentiment.
-    '''
-    if (a>b) and (a>c):
-        print('Overall reviews are: ' + "Positive")
-    elif (b>a) and (b>c):
-        print('Overall reviews are: ' + "Negative")
-    else:
-        print('Overall reviews are: ' + "Neutral")
-
-def sentiment_percent(a, b, c):
-    '''
-    Takes 3 sums of sentiments as input and displays rounded, percentage values \
-        of each sentiment.
-    '''
-    total = sum([a, b, c])
-    print(str(round(a / total * 100)) + '%' + ' of reviews are Positive')
-    print(str(round(b / total * 100)) + '%' + ' of reviews are Negative')
-    print(str(round(c / total * 100)) + '%' + ' of reviews are Neutral')
-
-
-clear_screen()
-sentiment_score(x, y, z)
-sentiment_percent(x, y, z)
-
-# displays total score of each sentiment
-print("Positive score: ", round(x, 2))
-print("Negative score: ", round(y, 2))
-print("Neutral score: ", round(z, 2))
+    # display results to user
+    display_results(overall, score, percentages, mean)
+    display_ratings_bar_chart(sentiment_df['rating'])
+    return 0
+    
+if __name__ == '__main__':
+    sys.exit(main())
